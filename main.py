@@ -25,6 +25,38 @@ app.add_middleware(
 ports_enviados = [3001]
 # TODO: crear variable para guardar numero no mandados en base de datos
 
+# Crear funcion para mandar el mensaje
+async def send_message(url):
+    bool_value = True
+    while(bool_value):
+        try:
+            ports_to_send = json.loads(requests.get(url).content)
+            if len(ports_to_send) == 0:
+                # volver a intenar
+                print('No hay puertos para enviar esperando 10 segundos')
+                await asyncio.sleep(10)
+            else:
+                try:
+                    ports_to_send = json.loads(requests.get(url).content)
+                    print(ports_to_send)
+                    ports_to_send_df = pd.DataFrame.from_records(ports_to_send)
+                    print(ports_to_send_df)
+                    ports_to_send_df = ports_to_send_df[ports_to_send_df['status'] == 'ready']
+                    if len(ports_to_send_df) > 0:
+                        return ports_to_send_df
+                    await asyncio.sleep(10)
+                    print('Ports to send: ', ports_to_send_df)
+                except Exception as e:
+                    print('Error al convertir a dataframe los puertos no estan en ready')
+                    print(e)
+                    await asyncio.sleep(10)
+
+        except Exception as e:
+            print('Error al obtener los puertos esperando 10 segundos')
+            await asyncio.sleep(10)
+            print(e)
+
+
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
@@ -35,45 +67,7 @@ async def upload(file: UploadFile = File(...)):
         os.rename(file.filename, 'assets/data.csv')
         files = pd.read_csv('assets/data.csv')
         for i in files.values:
-            ports_to_send = json.loads(requests.get(
-                'http://localhost:3000/api/botprocess').content)
-            try:
-                ports_to_send_df = pd.DataFrame.from_records(ports_to_send)
-                ports_to_send_df = ports_to_send_df[ports_to_send_df['status'] == 'ready']
-            except Exception as e:
-                print(e)
-                print('Abriendo Exception de ports_to_send_df')
-                bool_value = True
-                while (bool_value):
-                    await asyncio.sleep(15)
-                    print('despues de 15 segundos')
-                    ports_to_send = json.loads(requests.get(
-                        'http://localhost:3000/api/botprocess').content)
-                    if (len(ports_to_send) > 0):
-                        ports_to_send_df = pd.DataFrame.from_records(ports_to_send)
-                        ports_to_send_df = ports_to_send_df[ports_to_send_df['status'] == 'ready']
-                        if(len(ports_to_send_df['port']) > 0):    
-                            bool_value = False
-                ports_to_send = json.loads(requests.get(
-                    'http://localhost:3000/api/botprocess').content)
-                ports_to_send_df = pd.DataFrame.from_records(ports_to_send)
-                ports_to_send_df = ports_to_send_df[ports_to_send_df['status'] == 'ready']
-            print(len(ports_to_send_df['port']))
-            if (len(ports_to_send_df['port']) == 0):
-                bool_value = True
-                while (bool_value):
-                    await asyncio.sleep(15)
-                    print('despues de 15 segundos')
-                    ports_to_send = json.loads(requests.get(
-                        'http://localhost:3000/api/botprocess').content)
-                    ports_to_send_df = pd.DataFrame.from_records(ports_to_send)
-                    ports_to_send_df = ports_to_send_df[ports_to_send_df['status'] == 'ready']
-                    if (len(ports_to_send_df['port']) > 0):
-                        bool_value = False
-                ports_to_send = json.loads(requests.get(
-                    'http://localhost:3000/api/botprocess').content)
-                ports_to_send_df = pd.DataFrame.from_records(ports_to_send)
-                ports_to_send_df = ports_to_send_df[ports_to_send_df['status'] == 'ready']
+            ports_to_send_df = await send_message('http://localhost:3000/api/botprocess')
             port = random.choice(ports_to_send_df['port'])
             if (len(ports_enviados) < 2):
                 ports_enviados.append(port)
@@ -103,11 +97,7 @@ async def upload(file: UploadFile = File(...)):
                     'problema no se pudo mandar se va amandar el mensaje de otro puerto')
                 await asyncio.sleep(15)
                 try:
-                    ports_to_send = json.loads(requests.get(
-                        'http://localhost:3000/api/botprocess').content)
-                    ports_to_send_df = pd.DataFrame.from_records(
-                        ports_to_send)
-                    ports_to_send_df = ports_to_send_df[ports_to_send_df['status'] == 'ready']
+                    ports_to_send_df = await send_message('http://localhost:3000/api/botprocess')
                     port = random.choice(ports_to_send_df['port'])
                     send_text = requests.post(
                         f'http://localhost:{port}/api/whatsapp/sendtxt', post_json)
