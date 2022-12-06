@@ -27,6 +27,12 @@ ports_enviados = [3001]
 
 # Crear funcion para mandar el mensaje
 
+async def changeImage(path: str):
+    image = Image.open(path)
+    image.putpixel((random.randint(1, image.size[0]), random.randint(1, image.size[1])), (0,0,0,255))
+    image.save('/Users/alejandro/DevProjects/Projects/Zintech/Whats-App-Github/fast_upload_api/assets/img.png')
+    return '/Users/alejandro/DevProjects/Projects/Zintech/Whats-App-Github/fast_upload_api/assets/img.png'
+
 async def send_message_main(i, url_send):
     try:
         ports_to_send_df = await send_message('http://localhost:3000/api/botprocess')
@@ -130,17 +136,24 @@ async def upload(file: UploadFile = File(...)):
             random_sync_sleep = random.randint(minValue, maxValue)
             my_uuid = uuid.uuid4()
             my_uuid = str(my_uuid)
-            text = f'Hola {i[0]}, La Receta para un atraco al pueblo desde el Congreso de Morelos\nPrimer paso:\nRabindranath Salazar, aspirante a gobernador eterno, junto con su operador Miguel Lucia Espejo, le venden el apoyo y el apoyo de los tres diputados que “tienen” en el congreso a la oposición, Agustín Alonso y Francisco Sánchez.\n\nSegundo paso:\nTania Valentina se suma a la negociación y el nuevo grupo RSS24 obtiene un moche de $20 millones, $5 millones por diputado. \n\nTercer paso:\nPara recuperar el dinero de los expresidentes municipales y para poder financiar la lega campaña de rabindranath, el grupo RSS24 acuerda repartirse el paquete presupuestal a modo y repartirse las ganancias entre ellos.\n\nCuarto paso:\nPara destantear al enemigo y a los presidentes municipales aumentan del uno al dos por ciento los ingresos de los municipios, cuando anteriormente habían  propuesto 1%. De paso crean nuevas cláusulas y un “Fondo Municipal para obra pública” por $492 millones adicionales.\n\nQuinto paso:\nDe los $492 millones del nuevo fondo, $450 millones los etiquetan y asignan para solo 3 municipios del PAN y de Agustín Alonso y de Francisco Perez, con la condición de que dicho presupuesto se ejercido directamente por los municipios en cuestión, a cambio, le prometen a cada diputado entre $5Millones y $10Millones dependiendo de que tan trucha se puso el diputado local en turno.\n\nSexto y último paso:\nSi toda la tranza les sale, con el recurso de obra etiquetado, Agustín Alonso, Francisco Perez y el RSS24 planean embolsarse el 35% de ese dinero utilizando y asignando los contratos a empresas que son propiedad propia o de amigos y familiares muy cercanos a los distintos diputados como son las constructoras de los diputados Paola Cruz, Eliasib Polanco, Agustín Alonso, Francisco Perez, Alberto Sánchez, entre otros. Total esos municipios los controlan ellos y la maña.\n\n{my_uuid[0:7]}'
-            post_json = {"message": text, "phoneNumber": i[1]}
+            img_path = await changeImage('/Users/alejandro/DevProjects/Projects/Zintech/Whats-App-Github/fast_upload_api/assets/unicef.png')
+            # img_path = '/Users/alejandro/DevProjects/Projects/Zintech/Whats-App-Github/fast_upload_api/assets/video_unicef.mp4'
+            text = f'Hola *{i[1]} {i[2]}*,\n\n¡Te extrañamos! Vuelve a ser parte de la familia UNICEF y salva más vidas💙.\n\nTu ayuda toca el corazón de miles de niñas y niños 👦🏽👧🏽 que hoy te necesitan.\n\nDona ${i[5]} al mes y mueve al mundo de nuevo🌎.\nApóyalos aquí: \n\n{i[9]}'
+            post_json = {"message": text, "phoneNumber": i[3]}
+            post_image = {"path": img_path, "phoneNumber": i[3], "caption": text}
             try:
-                send_text = requests.post(
-                    f'http://localhost:{port}/api/whatsapp/sendtxt', post_json)
-                if (send_text.status_code != 201):
-                    print(send_text)
+                # send_text = requests.post(
+                #     f'http://localhost:{port}/api/whatsapp/sendtxt', post_json)
+           
+                # send_link = requests.post(f'http://localhost:{port}/api/whatsapp/sendtxt', {"message": i[9], "phoneNumber": i[3]})
+                send_image = requests.post(
+                    f'http://localhost:{port}/api/whatsapp/sendmedia', post_image,)
+                if (send_image.status_code != 201):
+                    print(send_image)
                     print(
-                        f'Problema Grave con el envio status code: {send_text.status_code}')
+                        f'Problema Grave con el envio status code: {send_image.status_code}')
                 else:
-                    print(send_text)
+                    print(send_image)
             except Exception as e:
                 print(e)
                 print(
@@ -149,8 +162,11 @@ async def upload(file: UploadFile = File(...)):
                 try:
                     ports_to_send_df = await send_message('http://localhost:3000/api/botprocess')
                     port = random.choice(ports_to_send_df['port'])
-                    send_text = requests.post(
-                        f'http://localhost:{port}/api/whatsapp/sendtxt', post_json)
+                    # send_text = requests.post(
+                    #     f'http://localhost:{port}/api/whatsapp/sendtxt', post_json)
+                    # send_link = requests.post(f'http://localhost:{port}/api/whatsapp/sendtxt', {"message": i[9], "phoneNumber": i[3]})
+                    send_image = requests.post(
+                    f'http://localhost:{port}/api/whatsapp/sendmedia', post_image)
                 except Exception as e:
                     print(e)
             print(
@@ -160,6 +176,61 @@ async def upload(file: UploadFile = File(...)):
         except Exception as e:
             print(e)
             pass
+
+# @app.post("/uploadunicef")
+# async def uploadUnicef(file: UploadFile = File(...)):
+#     contents = file.file.read()
+#     with open(file.filename, 'wb') as f:
+#         f.write(contents)
+#     os.rename(file.filename, 'assets/data.csv')
+#     files = pd.read_csv('assets/data.csv')
+#     for i in files.values:
+#         try:
+#             ports_to_send_df = await send_message('http://localhost:3000/api/botprocess')
+#             port = random.choice(ports_to_send_df['port'])
+#             if (len(ports_enviados) < 2):
+#                 ports_enviados.append(port)
+#             else:
+#                 if (port == ports_enviados[-1]):
+#                     port = random.choice(ports_to_send_df['port'])
+#             ports_enviados.append(port)
+#             params_random_response = requests.get(
+#                 'http://localhost:3000/api/sendparams').content
+#             minValue = json.loads(params_random_response)[0]['minValue']
+#             maxValue = json.loads(params_random_response)[0]['maxValue']
+#             random_sync_sleep = random.randint(minValue, maxValue)
+#             my_uuid = uuid.uuid4()
+#             my_uuid = str(my_uuid)
+#             text = f'Hola {i[1]} {i[2]},\n¡Te extrañamos! Vuelve a ser parte de la familia UNICEF y salva más vidas:corazón_azul:.\nTu ayuda toca el corazón de miles de niñas y niños :chico::tono-de-piel-4::niña::tono-de-piel-4: que hoy te necesitan.\nDona {i[5]} al mes y mueve al mundo de nuevo:tierra_asia:.\nApóyalos aquí: {i[9]}  \n\n{my_uuid[0:7]}'
+#             post_json = {"message": text, "phoneNumber": i[1]}
+#             try:
+#                 send_text = requests.post(
+#                     f'http://localhost:{port}/api/whatsapp/sendtxt', post_json)
+#                 if (send_text.status_code != 201):
+#                     print(send_text)
+#                     print(
+#                         f'Problema Grave con el envio status code: {send_text.status_code}')
+#                 else:
+#                     print(send_text)
+#             except Exception as e:
+#                 print(e)
+#                 print(
+#                     'problema no se pudo mandar se va amandar el mensaje de otro puerto')
+#                 await asyncio.sleep(15)
+#                 try:
+#                     ports_to_send_df = await send_message('http://localhost:3000/api/botprocess')
+#                     port = random.choice(ports_to_send_df['port'])
+#                     send_text = requests.post(
+#                         f'http://localhost:{port}/api/whatsapp/sendtxt', post_json)
+#                 except Exception as e:
+#                     print(e)
+#             print(
+#                 f'Mensaje terminando esperando para el siguiente {random_sync_sleep} segundos')
+#             await asyncio.sleep(random_sync_sleep)
+#             print('Mensaje enviado')
+#         except Exception as e:
+#             print(e)
+#             pass
 
 @app.post("/ckeckuser")
 async def upload(file: UploadFile = File(...)):
